@@ -1,0 +1,349 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  /*
+    Chillax is geometric and wide-apertured — it has real character at display
+    sizes but gets muddy in the 10–13px body and mono text this page is full of,
+    so it is scoped to headings via font-display rather than swapped in as sans.
+  */
+  --font-display: 'Chillax', 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+  Every component reads only these tokens, so the whole page is restyled from
+  this one block without touching layout.
+*/
+@layer base {
+  /*
+    "Flare" — the palette picked out of a live comparison. The Light Pillar runs
+    indigo (#2c27ff) -> orange (#f97316); the accent is a coral pulled a step
+    toward red (hue 9°, 62% lightness) so it belongs to the warm end of the ray
+    while still reading as its own colour rather than a sample of the background.
+
+    The alternates it beat, if this is ever revisited — accent / pillar stops:
+      Ember   #fb923c  indigo -> #f97316   pure orange, the starting point
+      Coral   #ff7a5c  indigo -> #ff5e5b   Flare's hue, undarkened
+      Amber   #fbbf24  #1e1b4b -> #f59e0b  gold; brightest, most legible
+      Magma   #f87171  #7f1d1d -> #fb923c  fully warm scene, no cool anywhere
+      Rose    #fb7185  #4c0519 -> #f43f5e  red tipping into pink
+      Ice     #7dd3fc  #1b2cff -> #22d3ee  the cool option
+    Each also carried its own --btn tone and --scrim; both scale with the
+    accent's hue and the scene's brightness respectively.
+  */
+  :root {
+    --ink: 255 255 255;
+    /*
+      Muted/faint sit brighter than a typical grey ramp: the shader background
+      moves and glows underneath, so body copy at 13–15px needs the extra
+      luminance to stay readable as the pillar sweeps behind it.
+    */
+    --ink-muted: 199 202 219;
+    --ink-faint: 139 142 163;
+    --border: 255 255 255;
+    --accent: 242 102 76;
+    --accent-bright: 251 144 119;
+    --page: 6 6 14;
+    /* button fills — see the .btn utility; tinted toward the accent's hue */
+    --btn: 40 23 21;
+    --btn-hover: 60 35 31;
+    /*
+      Neutral card/row fill, deliberately untinted. --btn carries the accent's
+      hue, which is right for a control you are meant to notice but reads as an
+      orange wash across something as large as a hovered list row.
+    */
+    --surface: 22 22 27;
+    /*
+      Opacity of the dark wash over the pillar (see LightPillar). The orange
+      bottom stop throws more light than a cool one would, and body copy sitting
+      over it washes out without this held down.
+    */
+    --scrim: 0.3;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: rgb(var(--page));
+    color: rgb(var(--ink));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    transition: background-color 600ms ease, color 400ms ease;
+  }
+}
+
+@utility ink {
+  color: rgb(var(--ink));
+}
+@utility ink-muted {
+  color: rgb(var(--ink-muted));
+}
+@utility ink-faint {
+  color: rgb(var(--ink-faint));
+}
+@utility accent {
+  color: rgb(var(--accent));
+}
+
+/*
+  Body copy sits directly on top of the animated pillar. A soft dark halo keeps
+  the glyph edges from dissolving whenever a bright band sweeps behind them —
+  invisible against the flat page tone, load-bearing over the shader.
+*/
+@utility text-legible {
+  text-shadow: 0 1px 14px rgb(0 0 0 / 0.55);
+}
+
+/*
+  Buttons are deliberately opaque: the shader backgrounds move underneath, and
+  a translucent fill let that motion show through and made labels hard to read.
+  --btn / --btn-hover are solid colours mixed from the page tone, so controls
+  stay legible over every variant while still reading as part of the palette.
+*/
+@utility btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 7px;
+  padding: 0.44rem 0.85rem;
+  font-size: 0.8125rem;
+  line-height: 1.15rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: rgb(var(--ink));
+  /* the tint keeps the fill related to the accent instead of a flat grey */
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--accent) / 0.14) 0%,
+    rgb(var(--accent) / 0.05) 45%,
+    rgb(var(--btn) / 0) 100%
+  );
+  background-color: rgb(var(--btn));
+  border: 1px solid rgb(var(--accent) / 0.22);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.09),
+    0 1px 2px rgb(0 0 0 / 0.35);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+@utility btn-primary {
+  color: rgb(var(--page));
+  font-weight: 600;
+  background-color: rgb(var(--accent));
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.28) 0%,
+    rgb(255 255 255 / 0.05) 48%,
+    rgb(0 0 0 / 0.08) 100%
+  );
+  border-color: rgb(var(--accent-bright));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.45),
+    0 2px 10px rgb(var(--accent) / 0.28);
+}
+
+/*
+  Specular sweep. The highlight is a skewed band parked off the left edge that
+  travels across on hover — motion only on intent, so nothing animates at rest.
+*/
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 45%;
+  transform: translateX(-160%) skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.16),
+    transparent
+  );
+  transition: transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-primary::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.55),
+    transparent
+  );
+}
+.btn:hover::after {
+  transform: translateX(320%) skewX(-18deg);
+}
+
+.btn:hover {
+  background-color: rgb(var(--btn-hover));
+  border-color: rgb(var(--accent) / 0.42);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.13),
+    0 4px 14px rgb(0 0 0 / 0.4);
+}
+.btn-primary:hover {
+  background-color: rgb(var(--accent-bright));
+  border-color: rgb(var(--accent-bright));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.5),
+    0 4px 18px rgb(var(--accent) / 0.45);
+}
+.btn:active {
+  transform: translateY(0);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--page)), 0 0 0 4px rgb(var(--accent) / 0.7);
+}
+
+/*
+  Flat black variant, used by the social row. Four accent-tinted chips directly
+  under the primary actions read as a second row of buttons competing for the
+  same attention; stripping the fill, border and top highlight hands the row
+  back to the brand marks.
+
+  Declared after the .btn hover rules on purpose — same specificity, so source
+  order is what lets it hold black through hover. The ::after sweep is inherited
+  from .btn untouched, which is the only motion left on these.
+*/
+.btn-plain,
+.btn-plain:hover {
+  background-color: #000;
+  background-image: none;
+}
+.btn-plain {
+  /*
+    Neutral white edge rather than the accent tint .btn uses — a fully black
+    chip with no border loses its shape entirely as the light ray passes behind
+    it, but an accent-tinted edge would put the chrome back.
+  */
+  border-color: rgb(255 255 255 / 0.14);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+}
+.btn-plain:hover {
+  border-color: rgb(255 255 255 / 0.26);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn::after {
+    transition: none;
+  }
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/*
+  Sticker drift. This is deliberately CSS rather than a JS keyframe animation:
+  `transform` is a compositor property, so once the raster is cached the browser
+  can run the whole loop off the main thread. Driving the same keyframes from JS
+  means writing inline styles on eight subtrees every frame, which costs a style
+  recalc and a layer update per sticker per frame.
+
+  Duration and delay come in per-sticker as custom properties.
+*/
+@keyframes sticker-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  28% {
+    transform: translate3d(18px, -30px, 0);
+  }
+  52% {
+    transform: translate3d(-13px, -9px, 0);
+  }
+  77% {
+    transform: translate3d(11px, -34px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.sticker-drift {
+  animation: sticker-drift var(--drift, 8s) ease-in-out var(--drift-delay, 0s) infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-drift {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/*
+  Sheen for the hero name: a moving highlight clipped to the glyphs. The base
+  stop is --ink so the text stays fully legible between passes.
+*/
+.name-sheen {
+  background-image: linear-gradient(
+    100deg,
+    rgb(var(--ink)) 0%,
+    rgb(var(--ink)) 38%,
+    rgb(var(--accent-bright)) 47%,
+    #ffffff 51%,
+    rgb(var(--accent-bright)) 55%,
+    rgb(var(--ink)) 64%,
+    rgb(var(--ink)) 100%
+  );
+  background-size: 280% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/*
+  The animation lives on its own class, which AnimatedName attaches for exactly
+  one sweep and then removes.
+
+  `background-position` is a paint property — unlike `transform` it cannot be
+  handed to the compositor, so every animating frame re-rasterizes the glyphs
+  and repaints the gradient through them. The previous rule ran `infinite` with
+  the sweep packed into the first 35% and a static tail, so two thirds of every
+  cycle paid that repaint to produce an unchanging image. Sweeping on demand
+  keeps the effect identical and idles in between.
+
+  Both ends of the sweep land in the gradient's --ink region, so the class going
+  on and off is invisible.
+*/
+.name-sheen--run {
+  animation: name-sheen 1.9s cubic-bezier(0.4, 0, 0.2, 1) 1;
+}
+
+@keyframes name-sheen {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .name-sheen {
+    background-image: none;
+    color: rgb(var(--ink));
+  }
+  .name-sheen--run {
+    animation: none;
+  }
+}
