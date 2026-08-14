@@ -1,0 +1,5 @@
+.DS_Store
+
+# Job-application PDFs kept locally at the repo root — not for the public repo.
+# (site/public/siddharth-potta-resume.pdf is intentionally tracked and shipped.)
+/*.pdf

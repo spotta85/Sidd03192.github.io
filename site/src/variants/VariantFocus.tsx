@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import { Eyebrow } from '@/components/ui/primitives'
 import { Links } from '@/components/ui/Links'
 import { AnimatedName } from '@/components/ui/AnimatedName'
 import { FloatingStickers } from '@/components/ui/FloatingStickers'
+import { Stats } from '@/components/ui/Stats'
 import { TechRow } from '@/components/ui/TechChip'
-import { experience, profile, projects } from '@/data/profile'
+import { experience, profile, projects, type StatTarget } from '@/data/profile'
 import { cn } from '@/lib/utils'
 
 const ROLES = ['GPU firmware', 'computer architecture', 'compilers', 'agentic systems'] as const
@@ -53,7 +54,13 @@ function RotatingWord() {
   )
 }
 
-function Home({ go }: { go: (p: Page) => void }) {
+function Home({
+  go,
+  goToStat,
+}: {
+  go: (p: Page) => void
+  goToStat: (target: StatTarget) => void
+}) {
   return (
     <motion.div
       key="home"
@@ -118,12 +125,14 @@ function Home({ go }: { go: (p: Page) => void }) {
         </div>
         <Links size="sm" />
       </motion.div>
+
+      <Stats className="relative z-20 mt-10" onSelect={goToStat} />
     </motion.div>
   )
 }
 
-function ProjectsPage() {
-  const [active, setActive] = useState(0)
+function ProjectsPage({ initial = 0 }: { initial?: number }) {
+  const [active, setActive] = useState(initial)
   const p = projects[active]
 
   return (
@@ -199,7 +208,32 @@ function ProjectsPage() {
   )
 }
 
-function ExperiencePage() {
+/**
+ * `focus` names a company to land on — set when you arrive from a stat. The
+ * entry is scrolled into view and its rail marker pulses briefly, so the number
+ * you clicked resolves to a visible place on the page rather than dumping you
+ * at the top of the list to find it yourself.
+ */
+function ExperiencePage({ focus }: { focus?: string }) {
+  const ref = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (!focus) return
+    const node = ref.current
+    if (!node) return
+    // after the page's own enter transition, so the scroll lands on a settled
+    // layout rather than one still animating in
+    const id = setTimeout(() => {
+      node.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+        block: 'center',
+      })
+    }, 420)
+    return () => clearTimeout(id)
+  }, [focus])
+
   return (
     <motion.div
       key="experience"
@@ -212,15 +246,27 @@ function ExperiencePage() {
       <Eyebrow className="mb-7 shrink-0">Experience</Eyebrow>
 
       <div className="flex min-h-0 flex-1 flex-col justify-center gap-0 overflow-y-auto">
-        {experience.map((e, i) => (
+        {experience.map((e, i) => {
+          const focused = e.company === focus
+          return (
           <motion.article
             key={e.company}
+            ref={focused ? ref : undefined}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.08 * i, duration: 0.45, ease }}
             className="group relative border-l border-[rgb(var(--border)/0.12)] pb-8 pl-7 last:pb-0"
           >
-            <span className="absolute -left-[4.5px] top-1.5 h-[9px] w-[9px] rounded-full border-2 border-[rgb(var(--page))] bg-[rgb(var(--accent))] transition-transform duration-200 group-hover:scale-125" />
+            <motion.span
+              // the marker pulses once on arrival to point out which entry the
+              // stat referred to, then settles into the normal dot
+              animate={focused ? { scale: [1, 1.9, 1.35] } : undefined}
+              transition={{ delay: 0.5, duration: 0.7, ease }}
+              className={cn(
+                'absolute -left-[4.5px] top-1.5 h-[9px] w-[9px] rounded-full border-2 border-[rgb(var(--page))] bg-[rgb(var(--accent))] transition-transform duration-200 group-hover:scale-125',
+                focused && 'shadow-[0_0_14px_3px_rgb(var(--accent)/0.6)]',
+              )}
+            />
 
             {/* header: company + role on the left, dates pinned right */}
             <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1">
@@ -246,7 +292,8 @@ function ExperiencePage() {
 
             <TechRow items={e.tech} className="mt-3" />
           </motion.article>
-        ))}
+          )
+        })}
       </div>
     </motion.div>
   )
@@ -254,10 +301,26 @@ function ExperiencePage() {
 
 export function VariantFocus() {
   const [page, setPage] = useState<Page>('home')
+  /**
+   * Which entry to land on, set only when you arrive by clicking a stat. It is
+   * cleared whenever you navigate by hand, so the nav and back button always
+   * open a page in its default state.
+   */
+  const [focus, setFocus] = useState<StatTarget | null>(null)
+
+  const go = (p: Page) => {
+    setFocus(null)
+    setPage(p)
+  }
+
+  const goToStat = (target: StatTarget) => {
+    setFocus(target)
+    setPage(target.page)
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && page !== 'home') setPage('home')
+      if (e.key === 'Escape' && page !== 'home') go('home')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -282,9 +345,23 @@ export function VariantFocus() {
       </AnimatePresence>
 
       <AnimatePresence mode="wait">
-        {page === 'home' && <Home key="home" go={setPage} />}
-        {page === 'projects' && <ProjectsPage key="projects" />}
-        {page === 'experience' && <ExperiencePage key="experience" />}
+        {page === 'home' && <Home key="home" go={go} goToStat={goToStat} />}
+        {page === 'projects' && (
+          <ProjectsPage
+            key="projects"
+            initial={
+              focus?.page === 'projects'
+                ? Math.max(0, projects.findIndex((p) => p.name === focus.project))
+                : 0
+            }
+          />
+        )}
+        {page === 'experience' && (
+          <ExperiencePage
+            key="experience"
+            focus={focus?.page === 'experience' ? focus.company : undefined}
+          />
+        )}
       </AnimatePresence>
 
       {/* page nav */}
