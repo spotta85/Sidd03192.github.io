@@ -31,10 +31,15 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
 
+      - id: pages
+        uses: actions/configure-pages@v5
+
       - run: npm ci
       - run: npm run build
+        env:
+          # "/<repo>" for a project site, "" for a user site; Vite needs a trailing slash.
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}/
 
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

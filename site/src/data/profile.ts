@@ -10,10 +10,10 @@ export const profile = {
   shortBlurb: 'CS @ UT Austin · GPU firmware at Intel · computer architecture, compilers, and everything under the runtime.',
   location: 'Folsom, CA · Austin, TX',
   links: {
-    github: 'https://github.com/Sidd03192',
+    github: 'https://github.com/spotta85',
     linkedin: 'https://www.linkedin.com/in/siddharth-potta-110260260/',
     email: 'mailto:sidddharthpotta@gmail.com',
-    resume: '/siddharth-potta-resume.pdf',
+    resume: `${import.meta.env.BASE_URL}siddharth-potta-resume.pdf`,
   },
 } as const
 
